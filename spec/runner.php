@@ -8,7 +8,6 @@ class AllTests extends TestSuite {
         $tests = array_merge(
             glob(dirname(__FILE__).'/*_test.php'),
             glob(dirname(__FILE__).'/*_spec.php')
-            // glob(dirname(__FILE__).'/loader_spec.php')
         );
 
         foreach ($tests as $test) {
