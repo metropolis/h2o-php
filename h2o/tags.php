@@ -277,23 +277,24 @@ class Include_Tag extends H2o_Node {
 
 class With_Tag extends H2o_Node {
     public $position;
-    private $variable, $shortcut;
+    private $long_var, $short_var;
     private $nodelist;
-    private $syntax = '/^([\w]+(:?\.[\w]+)?)\s+as\s+([\w]+(:?\.[\w]+)?)$/';
+    private $syntax = '/^(?P<long_var>[\w]+(?:\.[\w]+)*)\s+as\s+(?P<short_var>[\w]+(?:\.[\w]+)*)$/';
     
     function __construct($argstring, $parser, $position = 0) {
         if (!preg_match($this->syntax, $argstring, $matches))
             throw new TemplateSyntaxError('Invalid with tag syntax');
-            
+
         # extract the long name and shortcut
-        list($this->variable, $this->shortcut) = $matches;
+        $this->long_var = $matches["long_var"];
+        $this->short_var = $matches["short_var"];
+
         $this->nodelist = $parser->parse('endwith');
     }
     
     function render($context, $stream) {
-        $variable = $context->getVariable($this->variable);
-        
-        $context->push(array($this->shortcut => $variable));
+        $variable = $context->getVariable($this->long_var);
+        $context->push(array($this->short_var => $variable));
         $this->nodelist->render($context, $stream);
         $context->pop();
     }
@@ -432,4 +433,4 @@ class Csrf_token_Tag extends H2o_Node {
 }
 
 H2o::addTag(array('block', 'extends', 'include', 'if', 'ifchanged', 'for', 'with', 'cycle', 'load', 'debug', 'now', 'autoescape', 'csrf_token'));
-?>
+?>

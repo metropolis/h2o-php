@@ -1,6 +1,21 @@
 <?php
 require_once 'spec_helper.php';
 
+class Describe_with_tag extends SimpleSpec {
+    protected $context = array("galleries" => array(
+          0 => array('Picture' => array('name' => 'name of 1st picture', 'url' => 'http://domain.com/logo.gif')),
+          1 => array('Picture' => array('name' => 'name of 2nd picture', 'url' => 'http://domain.com/peter.jpeg')),
+        ),
+        "foo" => "foobar",
+        "picture" => "picture",
+        ); 
+    
+    function should_make_long_variables_accessible_by_short_variables () {
+        $rs= h2o('{% with galleries.first.Picture as picture %}{{ picture.name }}{% endwith %}')->render($this->context);
+        expects($rs)->should_be('name of 1st picture');
+    }
+}
+
 class Describe_if_tag extends SimpleSpec {
     
     function should_evaluate_boolean_expression() {
