@@ -1,4 +1,5 @@
 <?php
+
 class H2o_Lexer {
     function __construct($options = array()) {
         $this->options = $options;
@@ -6,34 +7,49 @@ class H2o_Lexer {
         if ($this->options['TRIM_TAGS'])
             $trim = '(?:\r?\n)?';
 
-        $this->pattern = ('/\G(.*?)(?:' .
-            preg_quote($this->options['BLOCK_START']). '(.*?)' .preg_quote($this->options['BLOCK_END']) . $trim . '|' .
-            preg_quote($this->options['VARIABLE_START']). '(.*?)' .preg_quote($this->options['VARIABLE_END']) . '|' .
-            preg_quote($this->options['COMMENT_START']). '(.*?)' .preg_quote($this->options['COMMENT_END']) . $trim . ')/sm'
-        );
+	      $this->pattern =  '/(?P<match>(?:'.
+            preg_quote($this->options['BLOCK_START']). '(?P<block>.*?)' .preg_quote($this->options['BLOCK_END']) . $trim . '|' .
+            preg_quote($this->options['VARIABLE_START']). '(?P<variable>.*?)' .preg_quote($this->options['VARIABLE_END']) . '|' .
+            preg_quote($this->options['COMMENT_START']). '(?P<comment>.*?)' .preg_quote($this->options['COMMENT_END']) . $trim .
+            '))/sum';
     }
 
     function tokenize($source) {
         $result = new TokenStream;
         $pos = 0;
         $matches = array();
-        preg_match_all($this->pattern, $source, $matches, PREG_SET_ORDER);
+        preg_match_all($this->pattern, $source, $matches,  PREG_OFFSET_CAPTURE|PREG_SET_ORDER  );
+	      if (preg_last_error() == PREG_BACKTRACK_LIMIT_ERROR) {
+          throw new TemplateSyntaxError('Template too large, PCRE backtrack limit reached');
+      	}
 
+	    
         foreach ($matches as $match) {
-            if ($match[1])
-            $result->feed('text', $match[1], $pos);
-            $tagpos = $pos + strlen($match[1]);
-            if ($match[2])
-            $result->feed('block', trim($match[2]), $tagpos);
-            elseif ($match[3])
-            $result->feed('variable', trim($match[3]), $tagpos);
-            elseif ($match[4])
-            $result->feed('comment', trim($match[4]), $tagpos);
-            $pos += strlen($match[0]);
+            if (!isset($match["match"])) {
+              throw new TemplateSyntaxError('Template error');
+	          }
+            $tagpos = $match["match"][1];
+
+            if ($tagpos > 0) {
+              $text = substr($source, $pos, $tagpos - $pos);
+              $result->feed('text', $text, $pos);
+            }
+
+            if (isset($match["block"]) && $match["block"][1] != -1) {
+              $result->feed('block', trim($match["block"][0]), $tagpos);
+            }
+            elseif (isset($match["variable"]) && $match["variable"][1] != -1) {
+              $result->feed('variable', trim($match["variable"][0]), $tagpos);
+            }
+            elseif (iset($match["comment"]) && $match["comment"][1] != -1) {
+              $result->feed('comment', trim($match["comment"][0]), $tagpos);
+            }
+            $pos  = $tagpos + strlen($match["match"][0]);
         }
         if ($pos < strlen($source)){
             $result->feed('text', substr($source, $pos), $pos);
         }
+
         $result->close();
         return $result;
     }
